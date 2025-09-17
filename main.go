@@ -15,15 +15,19 @@ func main() {
 
 	e = registerRoutes(e)
 
-	cfg, _ := newConfig() // TODO add error handling
-	if cfg == nil {
-		e.Logger.Fatal(errors.New("failed to get config"))
+	cfg, err := newConfig()
+	if cfg == nil || err != nil {
+		shutDown(e, errors.New("failed to get config"))
 	}
 
-	e.Logger.Fatal(startTaskOrchestrator(e, cfg))
+	shutDown(e, startUp(e, cfg))
 }
 
-func startTaskOrchestrator(e *echo.Echo, cfg *config.Config) error {
+func shutDown(e *echo.Echo, err error) {
+	e.Logger.Fatal(err)
+}
+
+func startUp(e *echo.Echo, cfg *config.Config) error {
 
 	return e.Start(cfg.Port)
 }
