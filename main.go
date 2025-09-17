@@ -15,16 +15,17 @@ func main() {
 
 	e = registerRoutes(e)
 
-	appConfig := newConfig()
-	if appConfig == nil {
+	cfg, _ := newConfig() // TODO add error handling
+	if cfg == nil {
 		e.Logger.Fatal(errors.New("failed to get config"))
 	}
 
-	e.Logger.Fatal(startTaskOrchestrator(e, appConfig))
+	e.Logger.Fatal(startTaskOrchestrator(e, cfg))
 }
 
-func startTaskOrchestrator(e *echo.Echo, appConfig *config.Config) error {
-	return e.Start(appConfig.Port)
+func startTaskOrchestrator(e *echo.Echo, cfg *config.Config) error {
+
+	return e.Start(cfg.Port)
 }
 
 func registerRoutes(e *echo.Echo) *echo.Echo {
@@ -37,8 +38,10 @@ func newLogger() echo.MiddlewareFunc {
 	return middleware.Logger()
 }
 
-func newConfig() *config.Config {
-	return &config.Config{
-		Port: ":8080",
-	}
+func newConfig() (*config.Config, error) {
+	cfg := &config.Config{}
+
+	err := cfg.NewConfig()
+
+	return cfg, err
 }
