@@ -8,6 +8,7 @@ import (
 )
 
 const (
+	envFileName        = "ENV_FILE_NAME"
 	defaultEnvFileName = ".env"
 )
 
@@ -24,7 +25,7 @@ func (c *Config) NewConfig() error {
 }
 
 func loadEnvironmentVariables() {
-	envFileName, ok := os.LookupEnv("ENV_FILE_NAME")
+	envFileName, ok := os.LookupEnv(envFileName)
 	if !ok {
 		envFileName = defaultEnvFileName
 	}
