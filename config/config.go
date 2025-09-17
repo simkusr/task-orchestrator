@@ -7,6 +7,10 @@ import (
 	"github.com/joho/godotenv"
 )
 
+const (
+	defaultEnvFileName = ".env"
+)
+
 type Config struct {
 	Port string `env:"PORT"`
 }
@@ -22,7 +26,7 @@ func (c *Config) NewConfig() error {
 func loadEnvironmentVariables() {
 	envFileName, ok := os.LookupEnv("ENV_FILE_NAME")
 	if !ok {
-		envFileName = ".env"
+		envFileName = defaultEnvFileName
 	}
 
 	godotenv.Load(envFileName)
