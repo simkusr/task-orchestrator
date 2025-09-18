@@ -1,30 +1,49 @@
 package main
 
 import (
-	"errors"
+	"context"
+	"net/http"
+	"os"
+	"os/signal"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/gommon/log"
 	"github.com/simkusr/task-orchestrator/config"
 	"github.com/simkusr/task-orchestrator/internal/api/tasks"
 )
 
 func main() {
 	e := echo.New()
+	e.Logger.SetLevel(log.INFO)
+
 	e.Use(newLogger())
 
 	e = registerRoutes(e)
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
 	cfg, err := newConfig()
 	if cfg == nil || err != nil {
-		shutDown(e, errors.New("failed to get config"))
+		log.Fatal("failed to load config")
 	}
 
-	shutDown(e, startUp(e, cfg))
-}
+	go func() {
+		if err := startUp(e, cfg); err != nil && err != http.ErrServerClosed {
+			e.Logger.Fatal("shutting down the server")
+		}
+	}()
 
-func shutDown(e *echo.Echo, err error) {
-	e.Logger.Fatal(err)
+	<-ctx.Done()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := e.Shutdown(ctx); err != nil {
+		e.Logger.Fatal(err)
+	}
 }
 
 func startUp(e *echo.Echo, cfg *config.Config) error {
