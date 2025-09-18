@@ -1,30 +1,54 @@
 package main
 
 import (
-	"errors"
+	"context"
+	"net/http"
+	"os"
+	"os/signal"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/gommon/log"
 	"github.com/simkusr/task-orchestrator/config"
 	"github.com/simkusr/task-orchestrator/internal/api/tasks"
 )
 
 func main() {
 	e := echo.New()
+	e.Logger.SetLevel(log.INFO)
+
 	e.Use(newLogger())
 
 	e = registerRoutes(e)
 
-	appConfig := newConfig()
-	if appConfig == nil {
-		e.Logger.Fatal(errors.New("failed to get config"))
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	cfg, err := newConfig()
+	if cfg == nil || err != nil {
+		log.Fatal("failed to load config")
 	}
 
-	e.Logger.Fatal(startTaskOrchestrator(e, appConfig))
+	go func() {
+		if err := startUp(e, cfg); err != nil && err != http.ErrServerClosed {
+			e.Logger.Fatal("shutting down the server")
+		}
+	}()
+
+	<-ctx.Done()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := e.Shutdown(ctx); err != nil {
+		e.Logger.Fatal(err)
+	}
 }
 
-func startTaskOrchestrator(e *echo.Echo, appConfig *config.Config) error {
-	return e.Start(appConfig.Port)
+func startUp(e *echo.Echo, cfg *config.Config) error {
+
+	return e.Start(cfg.Port)
 }
 
 func registerRoutes(e *echo.Echo) *echo.Echo {
@@ -37,8 +61,10 @@ func newLogger() echo.MiddlewareFunc {
 	return middleware.Logger()
 }
 
-func newConfig() *config.Config {
-	return &config.Config{
-		Port: ":8080",
-	}
+func newConfig() (*config.Config, error) {
+	cfg := &config.Config{}
+
+	err := cfg.NewConfig()
+
+	return cfg, err
 }
