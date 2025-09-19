@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"os"
 
 	"github.com/caarlos0/env/v11"
@@ -17,18 +18,20 @@ type Config struct {
 }
 
 func (c *Config) NewConfig() error {
-	loadEnvironmentVariables()
+	err := loadEnvironmentVariables()
+	if err != nil {
+		return errors.Join(err, errors.New("load env vars"))
+	}
 
-	err := env.Parse(c)
+	return env.Parse(c)
 
-	return err
 }
 
-func loadEnvironmentVariables() {
+func loadEnvironmentVariables() error {
 	envFileName, ok := os.LookupEnv(envFileName)
 	if !ok {
 		envFileName = defaultEnvFileName
 	}
 
-	godotenv.Load(envFileName)
+	return godotenv.Load(envFileName)
 }
